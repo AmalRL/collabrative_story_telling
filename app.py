@@ -19,6 +19,9 @@ CSV_BLOB_NAME = "campaign_metrics.csv"
 COL_BROAD_TAG = "Broad Tag"
 COL_CAMPAIGN_NO = "Campaign No."
 
+# CSV may use "Campaign No" without a trailing period
+_CAMPAIGN_NO_ALIASES = ("Campaign No", "Campaign No.", "Campaign Number")
+
 PERIOD_LABELS = ("Pre", "Campaign", "Post")
 PERIOD_COLORS = {
     "Pre": "gray",
@@ -77,6 +80,27 @@ def _storage_client() -> storage.Client:
     return storage.Client()
 
 
+def _prepare_dataframe(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """Strip headers and map known column aliases to canonical names."""
+    df = dataframe.copy()
+    df.columns = df.columns.str.strip()
+
+    if COL_CAMPAIGN_NO not in df.columns:
+        for alias in _CAMPAIGN_NO_ALIASES:
+            if alias in df.columns:
+                df = df.rename(columns={alias: COL_CAMPAIGN_NO})
+                break
+        else:
+            lower_to_actual = {col.lower(): col for col in df.columns}
+            for alias in _CAMPAIGN_NO_ALIASES:
+                match = lower_to_actual.get(alias.lower())
+                if match:
+                    df = df.rename(columns={match: COL_CAMPAIGN_NO})
+                    break
+
+    return df
+
+
 def _campaign_label(value) -> str:
     """Display label for x-axis grouping."""
     if pd.isna(value):
@@ -106,7 +130,7 @@ def load_campaign_data():
 
     raw_bytes = blob.download_as_bytes()
     dataframe = pd.read_csv(io.BytesIO(raw_bytes))
-    return dataframe
+    return _prepare_dataframe(dataframe)
 
 
 def melt_metric_wide_to_long(
@@ -242,6 +266,13 @@ def main() -> None:
 
     if raw_df is None or raw_df.empty:
         st.warning("Campaign metrics data is empty.")
+        return
+
+    if COL_CAMPAIGN_NO not in raw_df.columns:
+        st.error(
+            f"Required column '{COL_CAMPAIGN_NO}' not found. "
+            f"Columns in CSV: {', '.join(raw_df.columns.astype(str))}"
+        )
         return
 
     filtered_df = apply_sidebar_filters(raw_df)
