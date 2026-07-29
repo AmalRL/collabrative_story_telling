@@ -3,13 +3,16 @@ Campaign Performance Dashboard — loads metrics from GCS and renders Plotly cha
 """
 
 import io
+import json
+import os
 
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from google.cloud import storage
+from google.oauth2 import service_account
 
-# GCS source (credentials via GOOGLE_APPLICATION_CREDENTIALS on Render)
+# GCS source — Render: set GOOGLE_APPLICATION_CREDENTIALS_JSON to the SA JSON body
 BUCKET_NAME = "btpss-dashboard-data"
 CSV_BLOB_NAME = "campaign_metrics.csv"
 
@@ -57,6 +60,23 @@ METRIC_CHARTS = [
 ]
 
 
+def _storage_client() -> storage.Client:
+    """
+    Build a GCS client from Render-friendly env vars.
+
+    Prefer GOOGLE_APPLICATION_CREDENTIALS_JSON (full service account JSON string).
+    Otherwise use Application Default Credentials, including
+    GOOGLE_APPLICATION_CREDENTIALS when set to a JSON file path.
+    """
+    json_body = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+    if json_body:
+        info = json.loads(json_body)
+        credentials = service_account.Credentials.from_service_account_info(info)
+        project = info.get("project_id")
+        return storage.Client(credentials=credentials, project=project)
+    return storage.Client()
+
+
 def _campaign_label(value) -> str:
     """Display label for x-axis grouping."""
     if pd.isna(value):
@@ -71,10 +91,11 @@ def load_campaign_data():
     """
     Load campaign_metrics.csv from GCS.
 
-    Uses Application Default Credentials (honors GOOGLE_APPLICATION_CREDENTIALS).
+    Auth: GOOGLE_APPLICATION_CREDENTIALS_JSON on Render, or
+    GOOGLE_APPLICATION_CREDENTIALS (file path) / ADC locally.
     Cache TTL (600s) re-fetches from the bucket when it expires.
     """
-    client = storage.Client()
+    client = _storage_client()
     bucket = client.bucket(BUCKET_NAME)
     blob = bucket.blob(CSV_BLOB_NAME)
 
