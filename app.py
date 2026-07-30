@@ -250,10 +250,10 @@ def apply_sidebar_filters(dataframe: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Campaign Performance Dashboard",
+        page_title="Collaborative Storytelling Performance Dashboard",
         layout="wide",
     )
-    st.title("Campaign Performance Dashboard")
+    st.title("Collaborative Storytelling Performance Dashboard")
 
     try:
         raw_df = load_campaign_data()
