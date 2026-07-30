@@ -1,5 +1,5 @@
 """
-Campaign Performance Dashboard — loads metrics from GCS and renders Plotly charts.
+Collaborative Storytelling Performance Dashboard — loads metrics from GCS and renders Plotly charts.
 """
 
 import io
