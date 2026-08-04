@@ -1,5 +1,5 @@
 """
-Collaborative Storytelling Performance Dashboard — loads metrics from GCS and renders Plotly charts.
+Campaign Performance Dashboard — loads metrics from GCS and renders Plotly charts.
 """
 
 import io
@@ -224,11 +224,8 @@ def apply_sidebar_filters(dataframe: pd.DataFrame) -> pd.DataFrame:
 
     if COL_BROAD_TAG in filtered.columns:
         tags = sorted(filtered[COL_BROAD_TAG].dropna().astype(str).unique())
-        selected_tag = st.sidebar.selectbox("Broad Tag", ["All"] + tags, index=0)
-        if selected_tag != "All":
-            filtered = filtered[
-                filtered[COL_BROAD_TAG].astype(str) == selected_tag
-            ]
+        selected_tag = st.sidebar.selectbox("Broad Tag", tags, index=0)
+        filtered = filtered[filtered[COL_BROAD_TAG].astype(str) == selected_tag]
 
     if COL_CAMPAIGN_NO in filtered.columns:
         campaigns = sorted(filtered[COL_CAMPAIGN_NO].dropna().unique())
@@ -250,10 +247,10 @@ def apply_sidebar_filters(dataframe: pd.DataFrame) -> pd.DataFrame:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Collaborative Storytelling Performance Dashboard",
+        page_title="Campaign Performance Dashboard",
         layout="wide",
     )
-    st.title("Collaborative Storytelling Performance Dashboard")
+    st.title("Campaign Performance Dashboard")
 
     try:
         raw_df = load_campaign_data()
